@@ -80,6 +80,16 @@ impl Machine {
                 self.pc = next_pc;
                 return None;
             }
+            200 => {
+                let r_a = self.c[(self.pc + 1) as usize] % 16;
+                let r_b = self.c[(self.pc + 1) as usize] / 16;
+                let r_d = self.c[(self.pc + 2) as usize];
+
+                self.registers[r_d as usize] =
+                    self.registers[r_a as usize] + self.registers[r_b as usize];
+                self.pc = next_pc;
+                return None;
+            }
             _ => return Some(ExitReason::Panic),
         }
     }
@@ -121,5 +131,19 @@ mod test {
         m.step();
         m.step();
         assert_eq!(m.register(0), 42)
+    }
+
+    #[test]
+    fn add_two_register_store_third() {
+        let mut m = Machine::new(1000);
+        m.load_program(
+            vec![51, 0x00, 42, 51, 0x01, 3, 200, 0x01, 0x03],
+            vec![1, 0, 0, 1, 0, 0, 1, 0, 0],
+            vec![],
+        );
+        m.step();
+        m.step();
+        m.step();
+        assert_eq!(m.register(3), 45)
     }
 }
