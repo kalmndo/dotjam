@@ -80,6 +80,26 @@ impl Machine {
                 self.pc = next_pc;
                 return None;
             }
+            191 => {
+                let r_a = self.c[(self.pc + 1) as usize] % 16;
+                let r_b = self.c[(self.pc + 1) as usize] / 16;
+                let r_d = self.c[(self.pc + 2) as usize];
+
+                self.registers[r_d as usize] =
+                    self.registers[r_a as usize].wrapping_sub(self.registers[r_b as usize]);
+                self.pc = next_pc;
+                return None;
+            }
+            192 => {
+                let r_a = self.c[(self.pc + 1) as usize] % 16;
+                let r_b = self.c[(self.pc + 1) as usize] / 16;
+                let r_d = self.c[(self.pc + 2) as usize];
+
+                self.registers[r_d as usize] =
+                    self.registers[r_a as usize].wrapping_mul(self.registers[r_b as usize]);
+                self.pc = next_pc;
+                return None;
+            }
             200 => {
                 let r_a = self.c[(self.pc + 1) as usize] % 16;
                 let r_b = self.c[(self.pc + 1) as usize] / 16;
@@ -90,6 +110,7 @@ impl Machine {
                 self.pc = next_pc;
                 return None;
             }
+
             _ => return Some(ExitReason::Panic),
         }
     }
@@ -154,5 +175,29 @@ mod test {
         );
         m.run();
         assert_eq!(m.register(3), 45)
+    }
+
+    #[test]
+    fn sub_32() {
+        let mut m = Machine::new(1000);
+        m.load_program(
+            vec![51, 0x00, 10, 51, 0x01, 3, 191, 0x10, 0x02, 0],
+            vec![1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
+            vec![],
+        );
+        m.run();
+        assert_eq!(m.register(2), 7)
+    }
+
+    #[test]
+    fn mul_32() {
+        let mut m = Machine::new(1000);
+        m.load_program(
+            vec![51, 0x00, 5, 51, 0x01, 3, 192, 0x10, 0x02, 0],
+            vec![1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
+            vec![],
+        );
+        m.run();
+        assert_eq!(m.register(2), 15)
     }
 }
