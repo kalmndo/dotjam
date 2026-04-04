@@ -73,6 +73,13 @@ impl Machine {
                 self.pc = next_pc;
                 return None;
             }
+            100 => {
+                let r_d = self.c[(self.pc + 1) as usize] % 16;
+                let r_a = self.c[(self.pc + 1) as usize] / 16;
+                self.registers[r_d as usize] = self.registers[r_a as usize];
+                self.pc = next_pc;
+                return None;
+            }
             _ => return Some(ExitReason::Panic),
         }
     }
@@ -103,6 +110,15 @@ mod test {
     fn load_imm_loads_value() {
         let mut m = Machine::new(1000);
         m.load_program(vec![51, 0x00, 42], vec![1, 0, 0], vec![]);
+        m.step();
+        assert_eq!(m.register(0), 42)
+    }
+
+    #[test]
+    fn move_reg() {
+        let mut m = Machine::new(1000);
+        m.load_program(vec![51, 0x00, 42, 100, 0x01], vec![1, 0, 0, 1, 0], vec![]);
+        m.step();
         m.step();
         assert_eq!(m.register(0), 42)
     }
