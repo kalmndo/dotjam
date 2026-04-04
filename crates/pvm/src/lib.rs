@@ -80,6 +80,19 @@ impl Machine {
                 self.pc = next_pc;
                 return None;
             }
+            170 => {
+                let r_a = self.c[(self.pc + 1) as usize] % 16;
+                let r_b = self.c[(self.pc + 1) as usize] / 16;
+                let offset = self.c[(self.pc + 2) as usize];
+
+                if self.registers[r_a as usize] == self.registers[r_b as usize] {
+                    self.pc += offset as u32;
+                } else {
+                    self.pc = next_pc;
+                }
+
+                return None;
+            }
             191 => {
                 let r_a = self.c[(self.pc + 1) as usize] % 16;
                 let r_b = self.c[(self.pc + 1) as usize] / 16;
@@ -199,5 +212,17 @@ mod test {
         );
         m.run();
         assert_eq!(m.register(2), 15)
+    }
+
+    #[test]
+    fn branch_eq_jumps_when_equal() {
+        let mut m = Machine::new(1000);
+        m.load_program(
+            vec![51, 0x00, 5, 51, 0x01, 5, 170, 0x10, 4, 0, 51, 0x02, 99, 0],
+            vec![1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1],
+            vec![],
+        );
+        m.run();
+        assert_eq!(m.register(2), 99);
     }
 }
