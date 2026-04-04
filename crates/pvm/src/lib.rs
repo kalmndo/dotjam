@@ -102,6 +102,14 @@ impl Machine {
         }
         (i - start) as u32
     }
+
+    fn run(&mut self) -> ExitReason {
+        loop {
+            if let Some(reason) = self.step() {
+                return reason;
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -112,38 +120,39 @@ mod test {
     fn trap_returns_panic() {
         let mut m = Machine::new(1000);
         m.load_program(vec![0], vec![1], vec![]);
-        let result = m.step();
-        assert_eq!(result, Some(ExitReason::Panic));
+        let result = m.run();
+        assert_eq!(result, ExitReason::Panic);
     }
 
     #[test]
     fn load_imm_loads_value() {
         let mut m = Machine::new(1000);
-        m.load_program(vec![51, 0x00, 42], vec![1, 0, 0], vec![]);
-        m.step();
+        m.load_program(vec![51, 0x00, 42, 0], vec![1, 0, 0, 1], vec![]);
+        m.run();
         assert_eq!(m.register(0), 42)
     }
 
     #[test]
     fn move_reg() {
         let mut m = Machine::new(1000);
-        m.load_program(vec![51, 0x00, 42, 100, 0x01], vec![1, 0, 0, 1, 0], vec![]);
-        m.step();
-        m.step();
-        assert_eq!(m.register(0), 42)
+        m.load_program(
+            vec![51, 0x00, 42, 100, 0x01, 0],
+            vec![1, 0, 0, 1, 0, 1],
+            vec![],
+        );
+        m.run();
+        assert_eq!(m.register(1), 42)
     }
 
     #[test]
     fn add_two_register_store_third() {
         let mut m = Machine::new(1000);
         m.load_program(
-            vec![51, 0x00, 42, 51, 0x01, 3, 200, 0x01, 0x03],
-            vec![1, 0, 0, 1, 0, 0, 1, 0, 0],
+            vec![51, 0x00, 42, 51, 0x01, 3, 200, 0x01, 0x03, 0],
+            vec![1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
             vec![],
         );
-        m.step();
-        m.step();
-        m.step();
+        m.run();
         assert_eq!(m.register(3), 45)
     }
 }
