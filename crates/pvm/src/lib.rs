@@ -11,7 +11,8 @@ pub struct Machine {
     registers: [u64; 13],
     pc: u32,
     memory: Vec<u8>,
-    gas: u64,
+    gas: i64,
+    gas_charged: bool,
     exit: Option<ExitReason>,
     c: Vec<u8>,
     k: Vec<u8>,
@@ -19,12 +20,13 @@ pub struct Machine {
 }
 
 impl Machine {
-    pub fn new(gas: u64) -> Self {
+    pub fn new(gas: i64) -> Self {
         Machine {
             registers: [0u64; 13],
             pc: 0,
             memory: Vec::new(),
             gas,
+            gas_charged: false,
             exit: None,
             c: Vec::new(),
             k: Vec::new(),
@@ -44,8 +46,14 @@ impl Machine {
 
     pub fn step(&mut self) -> Option<ExitReason> {
         // gate 1: gas
-        if self.gas == 0 {
-            return Some(ExitReason::OutOfGas);
+        if !self.gas_charged {
+            let block_cost: i64 = 1; // TODO: Think about this calculation later
+            if self.gas >= block_cost {
+                self.gas -= block_cost;
+                self.gas_charged = true
+            } else {
+                return Some(ExitReason::OutOfGas);
+            }
         }
         // gate 2: memory
         // gate 3: execute
@@ -90,6 +98,7 @@ impl Machine {
                 } else {
                     self.pc = next_pc;
                 }
+                self.gas_charged = false;
 
                 return None;
             }
@@ -224,5 +233,20 @@ mod test {
         );
         m.run();
         assert_eq!(m.register(2), 99);
+    }
+
+    #[test]
+    fn should_out_of_gas() {
+        let mut m = Machine::new(1);
+        m.load_program(
+            vec![
+                51, 0x00, 5, 51, 0x01, 5, 170, 0x10, 4, 0, 51, 0x02, 99, 51, 0x00, 5, 51, 0x01, 5,
+                0,
+            ],
+            vec![1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1],
+            vec![],
+        );
+        let result = m.run();
+        assert_eq!(result, ExitReason::OutOfGas)
     }
 }
